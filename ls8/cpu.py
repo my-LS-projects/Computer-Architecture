@@ -100,7 +100,6 @@ class CPU:
     def run(self):
         """Run the CPU."""
         while True:
-            # PRN HLT
             if self.ram_read(self.pc) == LDI:
                 # Set the value of a register to an integer.
                 index = self.ram[self.pc + 1]
@@ -116,4 +115,5 @@ class CPU:
 
             elif self.ram_read(self.pc) == HLT:
                 # hHalt the CPU (and exit the emulator).
-                return False
+                print("Exiting...")
+                sys.exit(0)
