@@ -6,6 +6,7 @@ import sys
 LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
+MUL = 0b10100010
 
 
 class CPU:
@@ -20,26 +21,32 @@ class CPU:
         # program counter
         self.pc = 0
 
-    def load(self):
+    def load(self, file):
         """Load a program into memory."""
+        try:
+            address = 0
 
-        address = 0
+            with open(file) as f:
+                for line in f:
+                    # strip out white space, split at inline comment
+                    cleaned_line = line.strip().split("#")
+                    # grab number
+                    value = cleaned_line[0].strip()
 
-        # For now, we've just hardcoded a program:
+                    # check if blank or not, if blank skip to next line
+                    if value != "":
+                        # convert from binary to num
+                        num = int(value, 2)
+                        self.ram[address] = num
+                        address += 1
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+                    else:
+                        continue
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        except FileNotFoundError:
+            # exit and give error
+            print("ERROR: File not found")
+            sys.exit(1)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -47,6 +54,16 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         # elif op == "SUB": etc
+
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+
+        elif op == "DIV":
+            self.reg[reg_a] /= self.reg[reg_b]
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -100,20 +117,31 @@ class CPU:
     def run(self):
         """Run the CPU."""
         while True:
-            if self.ram_read(self.pc) == LDI:
+            op = self.ram_read(self.pc)
+            if op == LDI:
                 # Set the value of a register to an integer.
                 index = self.ram[self.pc + 1]
                 value = self.ram[self.pc + 2]
                 self.reg[index] = value
                 self.pc += 3
 
-            elif self.ram_read(self.pc) == PRN:
+            elif op == PRN:
                 # Print numeric value stored in the given register.
                 index = self.ram[self.pc + 1]
                 print(self.reg[index])
                 self.pc += 2
 
-            elif self.ram_read(self.pc) == HLT:
+            elif op == MUL:
+                reg_a = self.ram_read(self.pc + 1)
+                reg_b = self.ram_read(self.pc + 2)
+                self.alu("MUL", reg_a, reg_b)
+                self.pc += 3
+
+            elif op == HLT:
                 # hHalt the CPU (and exit the emulator).
                 print("Exiting...")
                 sys.exit(0)
+
+            else:
+                print("ERROR: Unknown command")
+                sys.exit(1)
