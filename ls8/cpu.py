@@ -7,6 +7,12 @@ LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
+RET = 0b00010001
+CALL = 0b01010000
+
+SP = 7  # stack pointer set to R7
 
 
 class CPU:
@@ -136,6 +142,66 @@ class CPU:
                 reg_b = self.ram_read(self.pc + 2)
                 self.alu("MUL", reg_a, reg_b)
                 self.pc += 3
+
+            elif op == POP:
+                """
+                Copy the value from the address pointed to by `SP`
+                to the given register.
+                
+                Increment `SP`.
+                """
+                # get the value out of memory
+                stack_val = self.ram_read(self.reg[SP])
+                # get the register number from the instruction in memory
+                reg_num = self.ram_read(self.pc + 1)
+                # write the value of register to the value held in the stack
+                self.reg[reg_num] = stack_val
+                # increment the SP
+                self.reg[SP] += 1
+                self.pc += 2
+
+            elif op == PUSH:
+                """
+                Copy the value from the address pointed to by `SP`
+                to the given register.
+                
+                Increment `SP`.
+                """
+                # decrement
+                self.reg[SP] -= 1
+                # get the value out of memory
+                stack_addr = self.reg[SP]
+                # get the register number from the instruction in memory
+                reg_num = self.ram_read(self.pc + 1)
+                # get the value out of the regsiter
+                val = self.reg[reg_num]
+                # write the reg value to a position in the stack
+                self.ram_write(stack_addr, val)
+                self.pc += 2
+
+            elif op == CALL:
+                """
+                Calls a subroutine (function) at the address stored in the register.
+                """
+                # decrement SP
+                self.reg[SP] -= 1
+                # get the current memory addres that SP points to
+                stack_addr = self.reg[SP]
+                # get the return memory address
+                return_addr = self.pc + 2
+                # push the return addr onto the stack
+                self.ram_write(stack_addr, return_addr)
+                # set PC to the value in the register
+                reg_num = self.ram_read(self.pc + 1)
+                self.pc = self.reg[reg_num]
+
+            elif op == RET:
+                """
+                Return from subroutine.
+                Pop the value from the top of the stack and store it in the `PC`.
+                """
+                self.pc = self.ram_read(self.reg[SP])
+                self.reg[SP] += 1
 
             elif op == HLT:
                 # hHalt the CPU (and exit the emulator).
